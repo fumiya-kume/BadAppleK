@@ -4,6 +4,8 @@
 
 [![IMAGE ALT TEXT HERE](https://user-images.githubusercontent.com/16269075/120477656-fc6f9e80-c3e6-11eb-84f6-79b4e2d1e101.gif)](https://youtu.be/Iv8jbo4KDFo)
 
+Youtube: [https://www.youtube.com/watch?v=Iv8jbo4KDFo](https://www.youtube.com/watch?v=Iv8jbo4KDFo)
+
 # How to execute on your environment.
 
 1. Checkout the repository
