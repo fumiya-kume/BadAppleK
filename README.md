@@ -1,4 +1,4 @@
-# BadAppleK
+# BadAppleK [![Java CI with Gradle](https://github.com/fumiya-kume/BadAppleK/actions/workflows/gradle.yml/badge.svg)](https://github.com/fumiya-kume/BadAppleK/actions/workflows/gradle.yml)
 
 Bad Apple!! ASCII Art Generator for macOS Terminal.
 
