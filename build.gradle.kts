@@ -5,7 +5,7 @@ plugins {
     application
 }
 
-group = "systems.nextmio.kuu"
+group = "systems.kuu.badapple"
 version = "1.0-SNAPSHOT"
 
 repositories {
