@@ -22,19 +22,13 @@ fun main(args: Array<String>) {
     val result = hashMapOf<Int, String>()
 
     runBlocking {
-        listOf(
-            async(Dispatchers.IO) {
-                convertImageFile(movieFileName, width, height, genFolderName)
-                println("Image Gen Done")
-
-                val fileCount = getGeneratedImageFileCount(genFolderName)
-                generateAA(fileCount, width, height, result)
-            },
-            async(Dispatchers.IO) {
-                convertAudioFile(movieFileName)
-                println("Audio Gen Done")
-            }
-        ).awaitAll()
+        convertImageFile(movieFileName, width, height, genFolderName)
+        println("Image Gen Done")
+        val fileCount = getGeneratedImageFileCount(genFolderName)
+        generateAA(fileCount, width, height, result)
+        File(audioFilePath).deleteOnExit()
+        convertAudioFile(movieFileName)
+        println("Audio Gen Done")
     }
     println("Convert Done")
 
