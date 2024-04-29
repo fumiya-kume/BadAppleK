@@ -96,12 +96,12 @@ private fun playBadApple(audioFilePath: String) {
 private fun getOutput(width: Int, height: Int, image: BufferedImage) =
     (0 until (height - 1)).map { height ->
         (0 until (width - 1)).map { width ->
-            val rgb = image.getRGB(width, height)
-            val red = (rgb ushr 16) and 0xFF
-            val green = (rgb ushr 8) and 0xFF
-            val blue = rgb and 0xFF
-            val chars = " .-+*wGHM#&%"
-            val luminance = (red * 0.2126f + green * 0.7152f + blue * 0.0722f) / 255
-            chars[((chars.length - 1) * luminance).toInt()]
+    val rgb = image.getRGB(width, height)
+    val red = (rgb ushr 16) and 0xFF
+    val green = (rgb ushr 8) and 0xFF
+    val blue = rgb and 0xFF
+    val luminance = (red * 0.2126f + green * 0.7152f + blue * 0.0722f) / 255
+    val chars = " .-+*wGHM#&%"
+    chars[(chars.lastIndex * luminance).toInt()]
         }.fold("\n") { i, i2 -> i + i2 }
     }.fold("") { i, i2 -> i + i2 }
