@@ -23,7 +23,7 @@ suspend fun main(args: Array<String>) = coroutineScope {
     val genFolderName = "gen"
     val width = 480
     val height = 360
-    val fps = 10
+    val fps = 30
 
     val result = hashMapOf<Int, String>()
 
