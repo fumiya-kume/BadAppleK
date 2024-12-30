@@ -1,6 +1,9 @@
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.awt.image.BufferedImage
 import java.io.File
@@ -10,9 +13,10 @@ import javax.imageio.ImageIO
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.Clip
 import javax.sound.sampled.DataLine
+import kotlin.coroutines.suspendCoroutine
 
 
-fun main(args: Array<String>) {
+suspend fun main(args: Array<String>) = coroutineScope {
     val movieFileName = "movie.mp4"
     val audioFilePath = "audio.wav"
     val genFolderName = "gen"
@@ -38,10 +42,20 @@ fun main(args: Array<String>) {
     playBadApple(audioFilePath)
 
     val fileCount = getGeneratedImageFileCount(genFolderName)
-    (1 until fileCount).forEach { currentImage ->
-        resetCursorPosition(output)
-        output.write(result[currentImage]!!)
-        Thread.sleep(TimeUnit.SECONDS.toMillis(1) / 11)
+    var currentImageIndex = 0
+    while(true){
+        if(currentImageIndex > fileCount){
+            break
+        }
+        launch(Dispatchers.IO) {
+            currentImageIndex += 1
+            resetCursorPosition(output)
+            result[currentImageIndex]?.let {
+                output.append(it)
+                output.flush()
+            }
+        }
+        delay(95)
     }
 }
 
