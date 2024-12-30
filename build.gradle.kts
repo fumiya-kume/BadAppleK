@@ -22,10 +22,6 @@ tasks.test {
     useJUnit()
 }
 
-tasks.withType<KotlinCompile>() {
-    kotlinOptions.jvmTarget = "17"
-}
-
 application {
     mainClass.set("MainKt")
 }
