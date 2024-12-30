@@ -23,11 +23,12 @@ suspend fun main(args: Array<String>) = coroutineScope {
     val genFolderName = "gen"
     val width = 480
     val height = 360
+    val fps = 10
 
     val result = hashMapOf<Int, String>()
 
     runBlocking {
-        convertImageFile(movieFileName, width, height, genFolderName)
+        convertImageFile(movieFileName, width, height, genFolderName, fps)
         println("Image Gen Done")
         val fileCount = getGeneratedImageFileCount(genFolderName)
         generateAA(fileCount, width, height, result)
@@ -57,7 +58,7 @@ suspend fun main(args: Array<String>) = coroutineScope {
                 output.flush()
             }
         }
-        delay(95)
+        delay((1000/fps - 5).toLong())
     }
 }
 
@@ -80,9 +81,10 @@ private fun convertImageFile(
     movieFileName: String,
     width: Int,
     height: Int,
-    genFolderName: String
+    genFolderName: String,
+    fps:Int,
 ) {
-    val imageGenCommand = "ffmpeg -i $movieFileName -r 10 -vf scale=$width:$height $genFolderName/%0d.bmp".split(' ')
+    val imageGenCommand = "ffmpeg -i $movieFileName -r $fps -vf scale=$width:$height $genFolderName/%0d.bmp".split(' ')
     ProcessBuilder(imageGenCommand).start().waitFor()
 }
 
