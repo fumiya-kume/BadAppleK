@@ -1,7 +1,5 @@
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -9,12 +7,12 @@ import kotlinx.coroutines.runBlocking
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.OutputStreamWriter
-import java.util.concurrent.TimeUnit
+import java.nio.file.Files
 import javax.imageio.ImageIO
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.Clip
 import javax.sound.sampled.DataLine
-import kotlin.coroutines.suspendCoroutine
+import kotlin.io.path.Path
 
 
 suspend fun main(args: Array<String>) = coroutineScope {
@@ -28,6 +26,12 @@ suspend fun main(args: Array<String>) = coroutineScope {
     val result = hashMapOf<Int, String>()
 
     runBlocking {
+
+        Files.list(Path(genFolderName)).forEach {
+            Files.delete(it)
+        }
+        Files.delete(Path(genFolderName))
+        Files.createDirectory(Path(genFolderName))
         convertImageFile(movieFileName, width, height, genFolderName, fps)
         println("Image Gen Done")
         val fileCount = getGeneratedImageFileCount(genFolderName)
