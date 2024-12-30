@@ -1,4 +1,5 @@
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -42,12 +43,13 @@ suspend fun main(args: Array<String>) = coroutineScope {
     playBadApple(audioFilePath)
 
     val fileCount = getGeneratedImageFileCount(genFolderName)
+    var job:Job? = null
     var currentImageIndex = 0
     while (true) {
         if (currentImageIndex > fileCount) {
             break
         }
-        launch(Dispatchers.IO) {
+        job = launch(Dispatchers.Default) {
             currentImageIndex += 1
             resetCursorPosition(output)
             result[currentImageIndex]?.let {
@@ -92,6 +94,7 @@ private fun convertAudioFile(movieFileName: String) {
 private fun resetCursorPosition(outputStreamWriter: OutputStreamWriter) {
     val ESC = "\u001B"
     outputStreamWriter.write("$ESC[0;0H")
+    outputStreamWriter.flush()
 }
 
 private fun clearTerminal(outputStreamWriter: OutputStreamWriter) {
