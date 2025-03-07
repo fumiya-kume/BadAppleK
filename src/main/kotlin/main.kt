@@ -1,9 +1,10 @@
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.OutputStreamWriter
@@ -14,7 +15,6 @@ import javax.sound.sampled.Clip
 import javax.sound.sampled.DataLine
 import kotlin.io.path.Path
 
-
 suspend fun main(args: Array<String>) = coroutineScope {
     val movieFileName = "movie.mp4"
     val audioFilePath = "audio.wav"
@@ -23,60 +23,58 @@ suspend fun main(args: Array<String>) = coroutineScope {
     val height = 360
     val fps = 30
 
-    val result = hashMapOf<Int, String>()
-
-    runBlocking {
-
-        Files.list(Path(genFolderName)).forEach {
-            Files.delete(it)
-        }
-        Files.delete(Path(genFolderName))
-        Files.createDirectory(Path(genFolderName))
-        convertImageFile(movieFileName, width, height, genFolderName, fps)
-        println("Image Gen Done")
-        val fileCount = getGeneratedImageFileCount(genFolderName)
-        generateAA(fileCount, width, height, result)
-        File(audioFilePath).deleteOnExit()
-        convertAudioFile(movieFileName)
-        println("Audio Gen Done")
+    Files.list(Path(genFolderName)).forEach {
+        Files.delete(it)
     }
+    Files.delete(Path(genFolderName))
+    Files.createDirectory(Path(genFolderName))
+    
+    convertImageFile(movieFileName, width, height, genFolderName, fps)
+    println("Image Gen Done")
+    val fileCount = getGeneratedImageFileCount(genFolderName)
+    
+    val asciiDeferred = async(Dispatchers.Default) {
+        generateAA(fileCount, width, height)
+    }
+    val audioDeferred = async {
+        convertAudioFile(movieFileName)
+    }
+    val result = asciiDeferred.await()
+    audioDeferred.await()
+    println("Audio Gen Done")
     println("Convert Done")
-
+    
     val output = OutputStreamWriter(System.out)
     clearTerminal(output)
-
+    
     playBadApple(audioFilePath)
-
-    val fileCount = getGeneratedImageFileCount(genFolderName)
-    var job:Job? = null
-    var currentImageIndex = 0
-    while (true) {
-        if (currentImageIndex > fileCount) {
-            break
+    
+    for (i in 1..fileCount) {
+        resetCursorPosition(output)
+        result[i]?.let {
+            output.append(it)
         }
-        job = launch(Dispatchers.Default) {
-            currentImageIndex += 1
-            resetCursorPosition(output)
-            result[currentImageIndex]?.let {
-                output.append(it)
-                output.flush()
-            }
-        }
+        output.flush()
         delay((1000/fps - 5).toLong())
     }
 }
 
-private fun generateAA(
+private suspend fun generateAA(
     fileCount: Int,
     width: Int,
-    height: Int,
-    result: HashMap<Int, String>
-) {
-    (1 until fileCount).toList().parallelStream().forEach {
-        val fileName = "$it.bmp"
-        val text = getOutput(width, height, ImageIO.read(File("gen/$fileName")))
-        result[it] = text
+    height: Int
+): HashMap<Int, String> = coroutineScope {
+    val deferredResults = (1 until fileCount).map { i ->
+        async(Dispatchers.Default) {
+            val fileName = "$i.bmp"
+            i to getOutput(width, height, ImageIO.read(File("gen/$fileName")))
+        }
     }
+    val result = HashMap<Int, String>()
+    deferredResults.awaitAll().forEach { (frame, text) ->
+        result[frame] = text
+    }
+    result
 }
 
 private fun getGeneratedImageFileCount(genFolderName: String) = File(genFolderName).list()?.size ?: 0
