@@ -1,10 +1,8 @@
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.OutputStreamWriter
@@ -34,14 +32,29 @@ suspend fun main(args: Array<String>) = coroutineScope {
     val fileCount = getGeneratedImageFileCount(genFolderName)
     
     val asciiDeferred = async(Dispatchers.Default) {
-        generateAA(fileCount, width, height)
+        generateAllAsciiFrames(fileCount, width, height)
     }
     val audioDeferred = async {
         convertAudioFile(movieFileName)
     }
-    val result = asciiDeferred.await()
-    audioDeferred.await()
-    println("Audio Gen Done")
+    
+    val result = try {
+        asciiDeferred.await()
+    } catch (e: Exception) {
+        println("ASCII generation failed: ${e.message}")
+        return@coroutineScope
+    }
+    
+    try {
+        audioDeferred.await()
+        println("Audio Gen Done")
+    } catch (e: Exception) {
+        println("Audio conversion failed: ${e.message}")
+        return@coroutineScope
+    }
+    
+    // Clean up audio file when program exits
+    File(audioFilePath).deleteOnExit()
     println("Convert Done")
     
     val output = OutputStreamWriter(System.out)
@@ -59,20 +72,30 @@ suspend fun main(args: Array<String>) = coroutineScope {
     }
 }
 
-private suspend fun generateAA(
+private suspend fun generateAllAsciiFrames(
     fileCount: Int,
     width: Int,
     height: Int
 ): HashMap<Int, String> = coroutineScope {
-    val deferredResults = (1 until fileCount).map { i ->
-        async(Dispatchers.Default) {
-            val fileName = "$i.bmp"
-            i to getOutput(width, height, ImageIO.read(File("gen/$fileName")))
-        }
-    }
     val result = HashMap<Int, String>()
-    deferredResults.awaitAll().forEach { (frame, text) ->
-        result[frame] = text
+    val batchSize = 50
+    val frames = (1 until fileCount).toList()
+    
+    frames.chunked(batchSize).forEach { batch ->
+        val deferredResults = batch.map { i ->
+            async(Dispatchers.Default) {
+                try {
+                    val fileName = "$i.bmp"
+                    i to getOutput(width, height, ImageIO.read(File("gen/$fileName")))
+                } catch (e: Exception) {
+                    println("Failed to process frame $i: ${e.message}")
+                    i to ""
+                }
+            }
+        }
+        deferredResults.awaitAll().forEach { (frame, text) ->
+            result[frame] = text
+        }
     }
     result
 }
