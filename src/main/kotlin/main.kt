@@ -34,7 +34,7 @@ suspend fun main(args: Array<String>) = coroutineScope {
     val asciiDeferred = async(Dispatchers.Default) {
         generateAllAsciiFrames(fileCount, width, height)
     }
-    val audioDeferred = async {
+    val audioDeferred = async(Dispatchers.IO) {
         convertAudioFile(movieFileName)
     }
     
@@ -79,7 +79,7 @@ private suspend fun generateAllAsciiFrames(
 ): HashMap<Int, String> = coroutineScope {
     val result = HashMap<Int, String>()
     val batchSize = 50
-    val frames = (1 until fileCount).toList()
+    val frames = (1..fileCount).toList()
     
     frames.chunked(batchSize).forEach { batch ->
         val deferredResults = batch.map { i ->
