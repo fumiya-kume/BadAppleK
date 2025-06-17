@@ -83,7 +83,7 @@ private suspend fun generateAllAsciiFrames(
     
     frames.chunked(batchSize).forEach { batch ->
         val deferredResults = batch.map { i ->
-            async(Dispatchers.Default) {
+            async(Dispatchers.IO) {
                 try {
                     val fileName = "$i.bmp"
                     i to getOutput(width, height, ImageIO.read(File("gen/$fileName")))
