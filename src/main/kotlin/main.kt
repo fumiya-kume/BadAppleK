@@ -34,7 +34,7 @@ suspend fun main(args: Array<String>) = coroutineScope {
     val fileCount = getGeneratedImageFileCount(genFolderName)
     
     val asciiDeferred = async(Dispatchers.Default) {
-        generateAllAsciiFrames(fileCount, width, height)
+        generateAllAsciiFrames(fileCount, width, height, genFolderName)
     }
     val audioDeferred = async(Dispatchers.IO) {
         convertAudioFile(movieFileName)
@@ -77,7 +77,8 @@ suspend fun main(args: Array<String>) = coroutineScope {
 private suspend fun generateAllAsciiFrames(
     fileCount: Int,
     width: Int,
-    height: Int
+    height: Int,
+    genFolderName: String
 ): HashMap<Int, String> = coroutineScope {
     val result = HashMap<Int, String>()
     val batchSize = DEFAULT_BATCH_SIZE
@@ -88,7 +89,7 @@ private suspend fun generateAllAsciiFrames(
             async(Dispatchers.IO) {
                 try {
                     val fileName = "$i.bmp"
-                    i to getOutput(width, height, ImageIO.read(File("gen/$fileName")))
+                    i to getOutput(width, height, ImageIO.read(File("$genFolderName/$fileName")))
                 } catch (e: Exception) {
                     println("Failed to process frame $i: ${e.message}")
                     i to ""
