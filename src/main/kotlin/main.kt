@@ -13,6 +13,8 @@ import javax.sound.sampled.Clip
 import javax.sound.sampled.DataLine
 import kotlin.io.path.Path
 
+const val DEFAULT_BATCH_SIZE = 50
+
 suspend fun main(args: Array<String>) = coroutineScope {
     val movieFileName = "movie.mp4"
     val audioFilePath = "audio.wav"
