@@ -78,7 +78,7 @@ private suspend fun generateAllAsciiFrames(
     height: Int
 ): HashMap<Int, String> = coroutineScope {
     val result = HashMap<Int, String>()
-    val batchSize = 50
+    val batchSize = DEFAULT_BATCH_SIZE
     val frames = (1..fileCount).toList()
     
     frames.chunked(batchSize).forEach { batch ->
