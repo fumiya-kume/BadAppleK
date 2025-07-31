@@ -1,9 +1,8 @@
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.awt.image.BufferedImage
 import java.io.File
 import java.io.OutputStreamWriter
@@ -14,6 +13,7 @@ import javax.sound.sampled.Clip
 import javax.sound.sampled.DataLine
 import kotlin.io.path.Path
 
+const val DEFAULT_BATCH_SIZE = 50
 
 suspend fun main(args: Array<String>) = coroutineScope {
     val movieFileName = "movie.mp4"
@@ -23,60 +23,84 @@ suspend fun main(args: Array<String>) = coroutineScope {
     val height = 360
     val fps = 30
 
-    val result = hashMapOf<Int, String>()
-
-    runBlocking {
-
-        Files.list(Path(genFolderName)).forEach {
-            Files.delete(it)
-        }
-        Files.delete(Path(genFolderName))
-        Files.createDirectory(Path(genFolderName))
-        convertImageFile(movieFileName, width, height, genFolderName, fps)
-        println("Image Gen Done")
-        val fileCount = getGeneratedImageFileCount(genFolderName)
-        generateAA(fileCount, width, height, result)
-        File(audioFilePath).deleteOnExit()
-        convertAudioFile(movieFileName)
-        println("Audio Gen Done")
+    Files.list(Path(genFolderName)).forEach {
+        Files.delete(it)
     }
+    Files.delete(Path(genFolderName))
+    Files.createDirectory(Path(genFolderName))
+    
+    convertImageFile(movieFileName, width, height, genFolderName, fps)
+    println("Image Gen Done")
+    val fileCount = getGeneratedImageFileCount(genFolderName)
+    
+    val asciiDeferred = async(Dispatchers.Default) {
+        generateAllAsciiFrames(fileCount, width, height, genFolderName)
+    }
+    val audioDeferred = async(Dispatchers.IO) {
+        convertAudioFile(movieFileName)
+    }
+    
+    val result = try {
+        asciiDeferred.await()
+    } catch (e: Exception) {
+        println("ASCII generation failed: ${e.message}")
+        return@coroutineScope
+    }
+    
+    try {
+        audioDeferred.await()
+        println("Audio Gen Done")
+    } catch (e: Exception) {
+        println("Audio conversion failed: ${e.message}")
+        return@coroutineScope
+    }
+    
+    // Clean up audio file when program exits
+    File(audioFilePath).deleteOnExit()
     println("Convert Done")
-
+    
     val output = OutputStreamWriter(System.out)
     clearTerminal(output)
-
+    
     playBadApple(audioFilePath)
-
-    val fileCount = getGeneratedImageFileCount(genFolderName)
-    var job:Job? = null
-    var currentImageIndex = 0
-    while (true) {
-        if (currentImageIndex > fileCount) {
-            break
+    
+    for (i in 1..fileCount) {
+        resetCursorPosition(output)
+        result[i]?.let {
+            output.append(it)
         }
-        job = launch(Dispatchers.Default) {
-            currentImageIndex += 1
-            resetCursorPosition(output)
-            result[currentImageIndex]?.let {
-                output.append(it)
-                output.flush()
-            }
-        }
+        output.flush()
         delay((1000/fps - 5).toLong())
     }
 }
 
-private fun generateAA(
+private suspend fun generateAllAsciiFrames(
     fileCount: Int,
     width: Int,
     height: Int,
-    result: HashMap<Int, String>
-) {
-    (1 until fileCount).toList().parallelStream().forEach {
-        val fileName = "$it.bmp"
-        val text = getOutput(width, height, ImageIO.read(File("gen/$fileName")))
-        result[it] = text
+    genFolderName: String
+): HashMap<Int, String> = coroutineScope {
+    val result = HashMap<Int, String>()
+    val batchSize = DEFAULT_BATCH_SIZE
+    val frames = (1..fileCount).toList()
+    
+    frames.chunked(batchSize).forEach { batch ->
+        val deferredResults = batch.map { i ->
+            async(Dispatchers.IO) {
+                try {
+                    val fileName = "$i.bmp"
+                    i to getOutput(width, height, ImageIO.read(File("$genFolderName/$fileName")))
+                } catch (e: Exception) {
+                    println("Failed to process frame $i: ${e.message}")
+                    i to ""
+                }
+            }
+        }
+        deferredResults.awaitAll().forEach { (frame, text) ->
+            result[frame] = text
+        }
     }
+    result
 }
 
 private fun getGeneratedImageFileCount(genFolderName: String) = File(genFolderName).list()?.size ?: 0
