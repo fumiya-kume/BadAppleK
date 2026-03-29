@@ -22,6 +22,16 @@ tasks.test {
     useJUnit()
 }
 
+tasks.withType<KotlinCompile> {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_23)
+    }
+}
+
+tasks.withType<JavaCompile> {
+    targetCompatibility = "23"
+}
+
 application {
     mainClass.set("MainKt")
 }
